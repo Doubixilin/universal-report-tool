@@ -1,0 +1,20 @@
+[package]
+name = "universal-report-tool"
+version = "0.1.0"
+description = "万能报告工具 - Excel数据导入、图表生成、Word报告自动化"
+authors = ["user"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.5.0", features = [] }
+tauri-plugin-dialog = "2.2.0"
+tauri-plugin-fs = "2.2.0"
+tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
