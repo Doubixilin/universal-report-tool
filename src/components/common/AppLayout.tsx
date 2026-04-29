@@ -7,6 +7,8 @@ import {
   BarChartOutlined,
   FileWordOutlined,
   SettingOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -26,7 +28,7 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const [collapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -82,6 +84,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }}
         >
           <span style={{ fontSize: 16, fontWeight: 500 }}>
+            {collapsed ? (
+              <MenuUnfoldOutlined
+                onClick={() => setCollapsed(false)}
+                style={{ cursor: "pointer", marginRight: 12 }}
+              />
+            ) : (
+              <MenuFoldOutlined
+                onClick={() => setCollapsed(true)}
+                style={{ cursor: "pointer", marginRight: 12 }}
+              />
+            )}
             {menuItems.find((item) => item.key === location.pathname)?.label ||
               "万能报告工具"}
           </span>

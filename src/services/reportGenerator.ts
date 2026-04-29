@@ -10,6 +10,7 @@ import type {
 import type { ChartSeries } from "@/types/chart";
 import { useChartStore } from "@/stores/chartStore";
 import { getDatabase } from "@/database";
+import { getChartConfigById } from "@/services/chartConfigService";
 
 /**
  * 将 chartStore 数据转换为 easy-template-x Chart 格式
@@ -36,10 +37,10 @@ export function buildChartTemplateData(
 /**
  * 解析数据绑定：将 TemplateBindings + datasets 解析为 easy-template-x 所需的键值对
  */
-function resolveBindings(
+async function resolveBindings(
   bindings: TemplateBindings,
   allRecords: Map<string, DataRecord[]>
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   const data: Record<string, unknown> = {};
 
   for (const [placeholderName, binding] of Object.entries(bindings)) {
@@ -48,14 +49,14 @@ function resolveBindings(
       const store = useChartStore.getState();
       let chartData: { title: string; categories: string[]; series: ChartSeries[] };
 
-      // 在 chartStore 内存列表中查找匹配的配置
-      const savedConfig = store.chartConfigs.find(c => c.id === binding.chartId);
-      if (savedConfig) {
-        // 使用保存的配置（内存中）
+      // 优先从 SQLite 持久化配置中读取（config_json 包含完整图表数据）
+      const savedRecord = binding.chartId ? await getChartConfigById(binding.chartId) : null;
+      if (savedRecord) {
+        const cfg = savedRecord.configJson;
         chartData = {
-          title: savedConfig.title,
-          categories: store.categories,  // TODO: 持久化后从 config_json 还原
-          series: store.series,
+          title: cfg.title,
+          categories: cfg.categories,
+          series: cfg.series,
         };
       } else if (binding.chartId === store.currentChart?.id && store.currentChart) {
         // 使用当前编辑的图表
@@ -115,15 +116,22 @@ export async function generateReport(
     const allRecords = new Map<string, DataRecord[]>();
     const db = await getDatabase();
     for (const ds of request.datasets) {
-      const rows = await db.select<DataRecord[]>(
+      const rows = await db.select<Array<Record<string, unknown>>>(
         "SELECT * FROM dataset_records WHERE dataset_id = $1 ORDER BY row_index ASC",
         [ds.id]
       );
-      allRecords.set(ds.id, rows || []);
+      const records: DataRecord[] = (rows || []).map((r) => ({
+        id: r.id as string,
+        datasetId: r.dataset_id as string,
+        rowIndex: r.row_index as number,
+        data: r.data_json ? JSON.parse(r.data_json as string) : {},
+        createdAt: r.created_at as string,
+      }));
+      allRecords.set(ds.id, records);
     }
 
     // Step 3: 解析绑定数据
-    const data = resolveBindings(
+    const data = await resolveBindings(
       request.bindings,
       allRecords
     );

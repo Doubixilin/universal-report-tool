@@ -7,6 +7,7 @@ import {
   Tag,
   message,
   Empty,
+  Modal,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { useProjectStore } from "@/stores/projectStore";
@@ -34,11 +35,20 @@ export default function TemplatePage() {
     if (!currentProject) return;
     try {
       const db = await getDatabase();
-      const result = await db.select<Template[]>(
+      const rows = await db.select<Array<Record<string, unknown>>>(
         "SELECT * FROM templates WHERE project_id = $1 ORDER BY created_at DESC",
         [currentProject.id]
       );
-      setTemplates(result || []);
+      const mapped: Template[] = (rows || []).map((r) => ({
+        id: r.id as string,
+        projectId: r.project_id as string,
+        name: r.name as string,
+        filePath: r.file_path as string,
+        placeholders: r.placeholders ? JSON.parse(r.placeholders as string) : [],
+        bindings: r.bindings ? JSON.parse(r.bindings as string) : {},
+        createdAt: r.created_at as string,
+      }));
+      setTemplates(mapped);
     } catch (error) {
       console.error("加载模板失败:", error);
     }
@@ -110,15 +120,24 @@ export default function TemplatePage() {
     message.success(`已选择模板: ${template.name}`);
   };
 
-  const handleDeleteTemplate = async (id: string) => {
-    try {
-      const db = await getDatabase();
-      await db.execute("DELETE FROM templates WHERE id = $1", [id]);
-      message.success("模板已删除");
-      await loadTemplates();
-    } catch (error) {
-      message.error("删除失败");
-    }
+  const handleDeleteTemplate = (id: string, name: string) => {
+    Modal.confirm({
+      title: "确认删除",
+      content: `确定要删除模板「${name}」吗？此操作不可恢复。`,
+      okText: "删除",
+      okType: "danger",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          const db = await getDatabase();
+          await db.execute("DELETE FROM templates WHERE id = $1", [id]);
+          message.success("模板已删除");
+          await loadTemplates();
+        } catch (error) {
+          message.error("删除失败");
+        }
+      },
+    });
   };
 
   if (!currentProject) {
@@ -175,7 +194,7 @@ export default function TemplatePage() {
                       danger
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteTemplate(template.id);
+                        handleDeleteTemplate(template.id, template.name);
                       }}
                     >
                       删除

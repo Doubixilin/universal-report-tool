@@ -1,14 +1,44 @@
-import { Card, Form, Select, Switch, Button, Input, Typography, message } from "antd";
-import { SaveOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { Card, Form, Select, Switch, Button, Input, Typography, message, Space, Statistic, Row, Col } from "antd";
+import { SaveOutlined, ExperimentOutlined, DeleteOutlined } from "@ant-design/icons";
+import { generateTestData, clearTestData } from "@/utils/testDataGenerator";
 
 const { Title } = Typography;
 const { TextArea } = Input;
 
 export default function SettingsPage() {
   const [form] = Form.useForm();
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{ datasets: number; chartConfigs: number; records: number } | null>(null);
 
   const handleSave = () => {
     message.success("配置已保存");
+  };
+
+  const handleGenerateTestData = async () => {
+    setTestLoading(true);
+    try {
+      const result = await generateTestData();
+      setTestResult(result);
+      message.success(`测试数据已生成：${result.datasets} 个数据集，${result.chartConfigs} 个图表配置，${result.records} 条记录`);
+    } catch (err) {
+      message.error("生成失败: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const handleClearTestData = async () => {
+    setTestLoading(true);
+    try {
+      await clearTestData();
+      setTestResult(null);
+      message.success("测试数据已清理");
+    } catch (err) {
+      message.error("清理失败: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setTestLoading(false);
+    }
   };
 
   return (
@@ -66,6 +96,43 @@ export default function SettingsPage() {
               placeholder='{"营业收入": ["收入", "营收", "Revenue"]}'
             />
           </Form.Item>
+        </Card>
+
+        <Card title="测试数据" style={{ marginTop: 16 }}>
+          <p style={{ color: "#666", marginBottom: 16 }}>
+            一键生成虚拟数据（3个数据集 + 15种图表配置），用于全流程功能验证。
+          </p>
+          <Space>
+            <Button
+              type="primary"
+              icon={<ExperimentOutlined />}
+              onClick={handleGenerateTestData}
+              loading={testLoading}
+            >
+              生成测试数据
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleClearTestData}
+              loading={testLoading}
+            >
+              清理测试数据
+            </Button>
+          </Space>
+          {testResult && (
+            <Row gutter={16} style={{ marginTop: 16 }}>
+              <Col span={8}>
+                <Statistic title="数据集" value={testResult.datasets} suffix="个" />
+              </Col>
+              <Col span={8}>
+                <Statistic title="图表配置" value={testResult.chartConfigs} suffix="种" />
+              </Col>
+              <Col span={8}>
+                <Statistic title="数据记录" value={testResult.records} suffix="条" />
+              </Col>
+            </Row>
+          )}
         </Card>
       </Form>
     </div>

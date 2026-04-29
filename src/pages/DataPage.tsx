@@ -9,6 +9,32 @@ import ImportHistoryPanel from "@/components/excel/ImportHistoryPanel";
 
 const { Title } = Typography;
 
+/** SQLite snake_case 行 → Dataset (camelCase) */
+function mapDataset(row: Record<string, unknown>): Dataset {
+  return {
+    id: row.id as string,
+    projectId: row.project_id as string,
+    name: row.name as string,
+    sourceFile: row.source_file as string,
+    importSchemeId: (row.import_scheme_id as string) ?? null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+    rowCount: row.row_count as number,
+    schema: row.schema_json ? JSON.parse(row.schema_json as string) : { fields: [] },
+  };
+}
+
+/** SQLite snake_case 行 → DataRecord (camelCase) */
+function mapDataRecord(row: Record<string, unknown>): DataRecord {
+  return {
+    id: row.id as string,
+    datasetId: row.dataset_id as string,
+    rowIndex: row.row_index as number,
+    data: row.data_json ? JSON.parse(row.data_json as string) : {},
+    createdAt: row.created_at as string,
+  };
+}
+
 export default function DataPage() {
   const { datasets, currentDataset, currentRecords, setCurrentDataset, setCurrentRecords, setDatasets } = useDataStore();
   const [activeTab, setActiveTab] = useState("datasets");
@@ -108,9 +134,11 @@ export default function DataPage() {
           throw txErr;
         }
 
-        // 刷新列表
-        const rows = await db.select<Array<Dataset>>("SELECT * FROM datasets ORDER BY created_at DESC");
-        setDatasets(rows || []);
+        // 刷新列表（SQLite 返回 snake_case，需映射为 camelCase）
+        const rows = await db.select<Array<Record<string, unknown>>>(
+          "SELECT * FROM datasets ORDER BY created_at DESC"
+        );
+        setDatasets((rows || []).map(mapDataset));
 
         Modal.success({
           title: "导入成功",
@@ -134,8 +162,10 @@ export default function DataPage() {
     setLoading(true);
     try {
       const db = await getDatabase();
-      const rows = await db.select<Array<Dataset>>("SELECT * FROM datasets ORDER BY created_at DESC");
-      setDatasets(rows || []);
+      const rows = await db.select<Array<Record<string, unknown>>>(
+        "SELECT * FROM datasets ORDER BY created_at DESC"
+      );
+      setDatasets((rows || []).map(mapDataset));
     } catch (err) {
       // BUG 7 FIX: 错误反馈给用户
       message.error("加载数据列表失败：" + (err instanceof Error ? err.message : "未知错误"));
@@ -151,11 +181,11 @@ export default function DataPage() {
       setLoading(true);
       try {
         const db = await getDatabase();
-        const rows = await db.select<DataRecord[]>(
+        const rows = await db.select<Array<Record<string, unknown>>>(
           "SELECT * FROM dataset_records WHERE dataset_id = $1 ORDER BY row_index ASC",
           [dataset.id]
         );
-        setCurrentRecords(rows || []);
+        setCurrentRecords((rows || []).map(mapDataRecord));
       } catch {
         setCurrentRecords([]);
       } finally {
@@ -212,7 +242,16 @@ export default function DataPage() {
         <Card title={`数据集：${currentDataset.name}`} extra={<span>共 {currentRecords.length} 行</span>}>
           <Table
             dataSource={currentRecords.map((r, i) => ({ ...r.data, _rowIndex: i }))}
-            // BUG 2 + 8 FIX: 使用稳定行索引作为 key，避免 Math.random() 导致全量重渲染
+            columns={
+              currentRecords.length > 0 && currentRecords[0].data
+                ? Object.keys(currentRecords[0].data).map((key) => ({
+                    title: key,
+                    dataIndex: key,
+                    key,
+                    ellipsis: true,
+                  }))
+                : undefined
+            }
             rowKey="_rowIndex"
             size="small"
             scroll={{ x: "max-content", y: 400 }}

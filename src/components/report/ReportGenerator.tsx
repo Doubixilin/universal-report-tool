@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Steps,
   Card,
@@ -12,12 +12,14 @@ import {
   Alert,
   Result,
   Spin,
+  Collapse,
 } from "antd";
 import {
   FileTextOutlined,
   LinkOutlined,
   CheckCircleOutlined,
   WarningOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { parsePlaceholders } from "@/utils/templateMigrator";
@@ -26,6 +28,7 @@ import { useTemplateStore } from "@/stores/templateStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useChartStore } from "@/stores/chartStore";
 import { useProjectStore } from "@/stores/projectStore";
+import { getChartConfigs } from "@/services/chartConfigService";
 import type {
   ParsedPlaceholder,
   TemplateBindings,
@@ -52,6 +55,31 @@ export default function ReportGenerator({ onGenerateComplete }: ReportGeneratorP
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<ReportGenerationResult | null>(null);
   const [parsedFields, setParsedFields] = useState<Record<string, string[]>>({});
+
+  // 启动时从 SQLite 加载图表配置到 chartStore
+  useEffect(() => {
+    (async () => {
+      try {
+        const configs = await getChartConfigs("default-project");
+        useChartStore.getState().setChartConfigs(
+          configs.map((c) => ({
+            id: c.id,
+            datasetId: c.datasetId,
+            title: c.name,
+            chartType: c.chartType,
+            xAxisField: "",
+            yAxisFields: [],
+            seriesNames: c.configJson.series.map((s) => s.name),
+            colors: c.configJson.series.map((s) => s.color ?? "").filter(Boolean),
+            createdAt: new Date(c.createdAt).getTime(),
+            updatedAt: new Date(c.updatedAt).getTime(),
+          }))
+        );
+      } catch {
+        // 静默失败，chartConfigs 为空时下拉框为空
+      }
+    })();
+  }, []);
 
   const steps = [
     { title: "选择模板", description: "选择Word报告模板" },
@@ -206,7 +234,7 @@ export default function ReportGenerator({ onGenerateComplete }: ReportGeneratorP
         }
 
         if (type === "image") {
-          return <Text type="secondary">待实现</Text>;
+          return <Tag>跳过（暂不支持）</Tag>;
         }
 
         // Text 类型：数据集 + 字段
@@ -246,6 +274,8 @@ export default function ReportGenerator({ onGenerateComplete }: ReportGeneratorP
 
   // ========== Step 2: 预览检查 ==========
   const unboundPlaceholders = placeholders.filter((ph) => {
+    // image 类型暂不支持，不计入未绑定
+    if (ph.type === "image") return false;
     const binding = bindings[ph.name];
     if (!binding) return true;
     if (ph.type === "chart" && !binding.chartId) return true;
@@ -313,7 +343,48 @@ export default function ReportGenerator({ onGenerateComplete }: ReportGeneratorP
         {currentStep === 0 && (
           <div>
             <Title level={5}>选择Word报告模板</Title>
-            <p>从本地选择已编辑好的 .docx 模板文件。模板中应包含 {`{var}`} 格式的占位符。</p>
+            <p>从本地选择已编辑好的 .docx 模板文件，系统会自动识别其中的占位符并引导你完成数据绑定。</p>
+
+            {/* 占位符语法指南 */}
+            <Collapse
+              style={{ marginBottom: 24 }}
+              items={[{
+                key: "guide",
+                label: (
+                  <span>
+                    <QuestionCircleOutlined style={{ marginRight: 8 }} />
+                    占位符语法指南 — 如何编写 Word 模板？
+                  </span>
+                ),
+                children: (
+                  <div style={{ fontSize: 13, lineHeight: 2 }}>
+                    <p><Text strong>在 Word 文档中插入以下格式的占位符，系统会自动识别并替换为实际数据：</Text></p>
+                    <Table
+                      size="small"
+                      pagination={false}
+                      dataSource={[
+                        { type: "文本替换", syntax: "{变量名}", example: "{公司名称}", desc: "替换为数据集中对应字段的值" },
+                        { type: "图表插入", syntax: "{图表名}", example: "{销售趋势图}", desc: "在该位置插入已绑定的图表（图片形式）" },
+                        { type: "循环表格", syntax: "{#表名}{列1}{列2}{/表名}", example: "{#明细}{部门}{金额}{/明细}", desc: "循环数据集的每一行，生成表格行" },
+                        { type: "条件显示", syntax: "{#条件}内容{/条件}", example: "{#显示备注}备注：...{/显示备注}", desc: "根据条件决定是否显示内容（默认显示）" },
+                      ]}
+                      columns={[
+                        { title: "类型", dataIndex: "type", width: 100, render: (t: string) => <Tag>{t}</Tag> },
+                        { title: "语法格式", dataIndex: "syntax", width: 260, render: (t: string) => <Text code>{t}</Text> },
+                        { title: "示例", dataIndex: "example", width: 260, render: (t: string) => <Text code>{t}</Text> },
+                        { title: "说明", dataIndex: "desc" },
+                      ]}
+                    />
+                    <Alert
+                      style={{ marginTop: 12 }}
+                      type="info"
+                      showIcon
+                      message="操作步骤：① 在 Word 中写好占位符 → ② 保存为 .docx → ③ 点下方按钮选择该文件 → ④ 在下一步绑定数据源"
+                    />
+                  </div>
+                ),
+              }]}
+            />
 
             {templates.length > 0 && (
               <div style={{ marginBottom: 16 }}>

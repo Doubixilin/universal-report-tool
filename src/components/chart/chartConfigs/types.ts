@@ -29,6 +29,8 @@ export interface ChartGeneratorInput {
   yAxisTitle?: string;
   /** 标注配置 */
   annotations?: AnnotationConfig;
+  /** 复合图表：每个系列的图表类型覆盖（key=系列名，value=图表类型） */
+  seriesTypes?: Record<string, ChartTypeKind>;
 }
 
 /** 图表配置生成器函数类型 */
