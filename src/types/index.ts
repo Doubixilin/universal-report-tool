@@ -1,3 +1,7 @@
+export * from './chart';
+import type { ChartConfig } from './chart';
+export type { ChartConfig };
+
 // ==================== 数据集相关 ====================
 
 export interface Dataset {
@@ -27,7 +31,7 @@ export interface DataRecord {
   id: string;
   datasetId: string;
   rowIndex: number;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -51,7 +55,7 @@ export interface SheetAnalysisResult {
   headerRowCount: number;
   dataStartRow: number;
   headers: string[];
-  sampleData: any[][];
+  sampleData: unknown[][];
   mergedCells: MergeCell[];
 }
 
@@ -79,34 +83,11 @@ export type ChartType =
   | "combo-bar-line"
   | "combo-line-line";
 
-export interface ChartConfig {
-  id: string;
-  projectId: string;
-  name: string;
-  chartType: ChartType;
-  datasetId: string;
-  dimensions: ChartDimensions;
-  style: ChartStyle;
-  extraOption?: Record<string, any>;
-}
-
-export interface ChartDimensions {
-  x?: string;
-  y?: string[];
-  category?: string;
-  series?: string;
-}
-
-export interface ChartStyle {
-  theme: string;
-  showLabel: boolean;
-  showLegend: boolean;
-  colors?: string[];
-}
+// ChartConfig 已移至 types/chart.ts，通过 export * from './chart' 导出
 
 // ==================== 模板相关 ====================
 
-export type PlaceholderType = "text" | "image" | "table" | "loop" | "condition";
+export type PlaceholderType = "text" | "image" | "chart" | "loop" | "condition";
 
 export interface Placeholder {
   name: string;
@@ -161,4 +142,34 @@ export interface ReportJob {
   error?: string;
   createdAt: string;
   completedAt?: string;
+}
+
+// ==================== 报告生成相关 ====================
+
+export interface ParsedPlaceholder {
+  name: string;
+  type: PlaceholderType;
+  rawCommand: string;
+  isOpener?: boolean;
+  isCloser?: boolean;
+  location: {
+    paragraph: number;
+    cell?: { row: number; col: number };
+  };
+}
+
+export interface ReportGenerationRequest {
+  templatePath: string;
+  outputPath: string;
+  bindings: TemplateBindings;
+  datasets: Dataset[];
+  chartConfigs: ChartConfig[];
+}
+
+export interface ReportGenerationResult {
+  success: boolean;
+  outputPath?: string;
+  error?: string;
+  placeholdersReplaced: number;
+  chartsUpdated: number;
 }

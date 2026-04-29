@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS import_schemes (
   data_start_row INTEGER DEFAULT 2,
   column_mapping TEXT,
   field_types TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 -- Word模板表
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS templates (
   placeholders TEXT,
   bindings TEXT,
   created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS chart_configs (
   dataset_id TEXT NOT NULL,
   config_json TEXT NOT NULL,
   created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
   FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
 );
@@ -86,4 +89,27 @@ CREATE TABLE IF NOT EXISTS report_jobs (
   completed_at TEXT,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
+
+-- 导入历史表
+CREATE TABLE IF NOT EXISTS import_history (
+  id TEXT PRIMARY KEY,
+  filename TEXT NOT NULL,
+  sheet_name TEXT NOT NULL,
+  column_mapping TEXT NOT NULL,
+  field_types TEXT,
+  data_summary TEXT,
+  import_fingerprint TEXT,
+  created_at TEXT NOT NULL,
+  project_id TEXT REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_import_history_project ON import_history(project_id);
+CREATE INDEX IF NOT EXISTS idx_import_history_fingerprint ON import_history(import_fingerprint);
+
+-- 性能优化索引（2026-04-29 添加）
+CREATE INDEX IF NOT EXISTS idx_records_dataset ON dataset_records(dataset_id);
+CREATE INDEX IF NOT EXISTS idx_datasets_project ON datasets(project_id);
+CREATE INDEX IF NOT EXISTS idx_templates_project ON templates(project_id);
+CREATE INDEX IF NOT EXISTS idx_chart_configs_project ON chart_configs(project_id);
+CREATE INDEX IF NOT EXISTS idx_report_jobs_project ON report_jobs(project_id);
 `;

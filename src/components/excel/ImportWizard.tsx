@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { Steps, Button, message, Space, Card, Typography } from "antd";
-import { UploadOutlined, SaveOutlined } from "@ant-design/icons";
+import { Steps, Button, message, Space, Card, Typography, Alert } from "antd";
+import { UploadOutlined, SaveOutlined, HistoryOutlined } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import {
   parseWorkbook,
@@ -13,11 +13,14 @@ import { SheetAnalysisResult, Dataset, ImportScheme, FieldConfig } from "@/types
 import SheetSelector from "./SheetSelector";
 import DataPreview from "./DataPreview";
 import ColumnMapper from "./ColumnMapper";
+import ImportHistoryPanel from "./ImportHistoryPanel";
+import { generateFingerprint, type ImportHistoryRecord } from "@/services/importHistory";
 
 const { Title, Text } = Typography;
 
 interface ImportWizardProps {
   file: File | null;
+  projectId: string;
   onImportComplete: (
     dataset: Dataset,
     records: Array<Record<string, any>>,
@@ -26,7 +29,7 @@ interface ImportWizardProps {
   onCancel: () => void;
 }
 
-export default function ImportWizard({ file, onImportComplete, onCancel }: ImportWizardProps) {
+export default function ImportWizard({ file, projectId, onImportComplete, onCancel }: ImportWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [sheetNames, setSheetNames] = useState<string[]>([]);
@@ -36,14 +39,16 @@ export default function ImportWizard({ file, onImportComplete, onCancel }: Impor
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [fieldTypes, setFieldTypes] = useState<Record<string, FieldConfig["type"]>>({});
   const [loading, setLoading] = useState(false);
+  const [matchedHistory, setMatchedHistory] = useState<ImportHistoryRecord | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   // 步骤1：解析文件
-  const handleFileParse = useCallback(() => {
+  const handleFileParse = useCallback(async () => {
     if (!file) return;
     setLoading(true);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         const wb = parseWorkbook(arrayBuffer);
@@ -61,6 +66,19 @@ export default function ImportWizard({ file, onImportComplete, onCancel }: Impor
         const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         setRawData(raw);
 
+        // 检查是否有匹配的历史配置
+        const fingerprint = generateFingerprint(result.headers);
+        try {
+          const { findByFingerprint } = await import('@/services/importHistory');
+          const match = await findByFingerprint(fingerprint, projectId);
+          if (match) {
+            setMatchedHistory(match);
+            message.info(`检测到相同结构的文件「${match.filename}」，可一键复用列映射`);
+          }
+        } catch {
+          // import_history 表可能不存在，忽略
+        }
+
         setCurrentStep(1);
         message.success(`解析成功！共 ${names.length} 个工作表`);
       } catch (err) {
@@ -70,7 +88,7 @@ export default function ImportWizard({ file, onImportComplete, onCancel }: Impor
       }
     };
     reader.readAsArrayBuffer(file);
-  }, [file]);
+  }, [file, projectId]);
 
   // 切换Sheet
   const handleSheetChange = useCallback(
@@ -139,13 +157,29 @@ export default function ImportWizard({ file, onImportComplete, onCancel }: Impor
         createdAt: new Date().toISOString(),
       };
 
+      // 保存导入历史
+      try {
+        const { saveImportHistory, generateFingerprint } = await import('@/services/importHistory');
+        await saveImportHistory({
+          filename: file.name,
+          sheetName: activeSheet,
+          columnMapping,
+          fieldTypes,
+          dataSummary: { rowCount: records.length, columns: analysis.headers.length },
+          fingerprint: generateFingerprint(analysis.headers),
+          projectId,
+        });
+      } catch {
+        // 静默处理，不影响主流程
+      }
+
       await onImportComplete(dataset, records, scheme);
     } catch (err) {
       message.error("导入失败：" + (err instanceof Error ? err.message : "未知错误"));
     } finally {
       setLoading(false);
     }
-  }, [analysis, file, rawData, columnMapping, fieldTypes, onImportComplete]);
+  }, [analysis, file, rawData, columnMapping, fieldTypes, activeSheet, projectId, onImportComplete]);
 
   const steps = [
     { title: "上传文件", description: file?.name || "选择Excel文件" },
@@ -168,6 +202,40 @@ export default function ImportWizard({ file, onImportComplete, onCancel }: Impor
           <Text>已选择文件：</Text>
           <Text strong>{file?.name}</Text>
           <Text type="secondary"> ({((file?.size || 0) / 1024).toFixed(1)} KB)</Text>
+
+          {matchedHistory && (
+            <Alert
+              style={{ marginTop: 16 }}
+              message="检测到相同结构的历史导入"
+              description={
+                <div>
+                  <Text>文件名：{matchedHistory.filename} | 工作表：{matchedHistory.sheetName}</Text>
+                  <br />
+                  <Text>数据：{matchedHistory.dataSummary.rowCount} 行 × {matchedHistory.dataSummary.columns} 列</Text>
+                  <br />
+                  <Text>列映射：{Object.keys(matchedHistory.columnMapping).length} 列</Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<HistoryOutlined />}
+                      onClick={() => {
+                        setColumnMapping(matchedHistory.columnMapping);
+                        setFieldTypes(matchedHistory.fieldTypes as Record<string, FieldConfig["type"]>);
+                        message.success('已复用历史列映射配置');
+                      }}
+                    >
+                      一键复用列映射
+                    </Button>
+                  </div>
+                </div>
+              }
+              type="success"
+              showIcon
+              closable
+            />
+          )}
+
           <div style={{ marginTop: 16 }}>
             <Space>
               <Button type="primary" icon={<UploadOutlined />} onClick={handleFileParse} loading={loading}>
@@ -182,28 +250,50 @@ export default function ImportWizard({ file, onImportComplete, onCancel }: Impor
       {/* 步骤1：数据预览 + Sheet切换 */}
       {currentStep === 1 && analysis && (
         <div>
-          <SheetSelector
-            sheetNames={sheetNames}
-            activeSheet={activeSheet}
-            onChange={handleSheetChange}
-          />
-          <DataPreview
-            headers={analysis.headers}
-            data={rawData}
-            tableType={analysis.tableType}
-            headerRowCount={analysis.headerRowCount}
-            dataStartRow={analysis.dataStartRow}
-            mergedCells={analysis.mergedCells}
-            loading={loading}
-          />
-          <div style={{ marginTop: 16 }}>
-            <Space>
-              <Button onClick={() => setCurrentStep(0)}>上一步</Button>
-              <Button type="primary" onClick={() => setCurrentStep(2)}>
-                下一步：配置列映射
-              </Button>
-            </Space>
-          </div>
+          {showHistory ? (
+            <div>
+              <div style={{ marginBottom: 12 }}>
+                <Button onClick={() => setShowHistory(false)}>返回导入流程</Button>
+              </div>
+              <ImportHistoryPanel
+                projectId={projectId}
+                onReuse={(record) => {
+                  setColumnMapping(record.columnMapping);
+                  setFieldTypes(record.fieldTypes as Record<string, FieldConfig["type"]>);
+                  message.success('已复用历史配置，可继续调整');
+                  setShowHistory(false);
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              <SheetSelector
+                sheetNames={sheetNames}
+                activeSheet={activeSheet}
+                onChange={handleSheetChange}
+              />
+              <DataPreview
+                headers={analysis.headers}
+                data={rawData}
+                tableType={analysis.tableType}
+                headerRowCount={analysis.headerRowCount}
+                dataStartRow={analysis.dataStartRow}
+                mergedCells={analysis.mergedCells}
+                loading={loading}
+              />
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <Button onClick={() => setShowHistory(true)} icon={<HistoryOutlined />}>
+                  查看导入历史
+                </Button>
+                <Space>
+                  <Button onClick={() => setCurrentStep(0)}>上一步</Button>
+                  <Button type="primary" onClick={() => setCurrentStep(2)}>
+                    下一步：配置列映射
+                  </Button>
+                </Space>
+              </div>
+            </>
+          )}
         </div>
       )}
 

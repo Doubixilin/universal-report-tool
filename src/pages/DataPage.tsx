@@ -5,6 +5,7 @@ import { useDataStore } from "@/stores/dataStore";
 import { getDatabase } from "@/database";
 import { Dataset, DataRecord, ImportScheme } from "@/types";
 import ImportWizard from "@/components/excel/ImportWizard";
+import ImportHistoryPanel from "@/components/excel/ImportHistoryPanel";
 
 const { Title } = Typography;
 
@@ -57,8 +58,8 @@ export default function DataPage() {
         try {
           // 先插入 import_scheme
           await db.execute(
-            `INSERT INTO import_schemes (id, name, table_type, header_rows, data_start_row, column_mapping, field_types, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            `INSERT INTO import_schemes (id, name, table_type, header_rows, data_start_row, column_mapping, field_types, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [
               scheme.id,
               scheme.name,
@@ -67,6 +68,7 @@ export default function DataPage() {
               scheme.dataStartRow,
               JSON.stringify(scheme.columnMapping),
               JSON.stringify(scheme.fieldTypes),
+              scheme.createdAt,
               scheme.createdAt,
             ]
           );
@@ -227,6 +229,11 @@ export default function DataPage() {
       label: "导入方案",
       children: <Empty description="导入方案管理（待实现）" />,
     },
+    {
+      key: "history",
+      label: "导入历史",
+      children: <ImportHistoryPanel projectId="default-project" />,
+    },
   ];
 
   return (
@@ -266,6 +273,7 @@ export default function DataPage() {
         {pendingFile && (
           <ImportWizard
             file={pendingFile}
+            projectId="default-project"
             onImportComplete={handleImportComplete}
             onCancel={handleCancelImport}
           />

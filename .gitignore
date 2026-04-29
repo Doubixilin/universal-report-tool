@@ -1,8 +1,34 @@
+# Dependencies
 node_modules/
+
+# Build output
+dist/
 src-tauri/target/
 src-tauri/.tauri/
-dist/
+
+# Environment
 .env
+.env.*
+
+# Logs
 *.log
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Package archives
 *.tgz
+
+# Test artifacts
+src-tauri/test-chart.xlsx
+src/types/chart-test.html
+test-templates/
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/settings.json
+.idea/

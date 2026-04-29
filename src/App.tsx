@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "@/components/common/AppLayout";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 import ProjectPage from "@/pages/ProjectPage";
 import DataPage from "@/pages/DataPage";
 import TemplatePage from "@/pages/TemplatePage";
@@ -11,15 +12,17 @@ function App() {
   return (
     <BrowserRouter>
       <AppLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/project" replace />} />
-          <Route path="/project" element={<ProjectPage />} />
-          <Route path="/data" element={<DataPage />} />
-          <Route path="/template" element={<TemplatePage />} />
-          <Route path="/chart" element={<ChartDesignerPage />} />
-          <Route path="/report" element={<ReportPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Navigate to="/project" replace />} />
+            <Route path="/project" element={<ProjectPage />} />
+            <Route path="/data" element={<DataPage />} />
+            <Route path="/template" element={<TemplatePage />} />
+            <Route path="/chart" element={<ChartDesignerPage />} />
+            <Route path="/report" element={<ReportPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </ErrorBoundary>
       </AppLayout>
     </BrowserRouter>
   );

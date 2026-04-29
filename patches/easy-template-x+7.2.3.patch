@@ -1,0 +1,46 @@
+diff --git a/node_modules/easy-template-x/dist/cjs/easy-template-x.cjs b/node_modules/easy-template-x/dist/cjs/easy-template-x.cjs
+index a1703a7..c94c3df 100644
+--- a/node_modules/easy-template-x/dist/cjs/easy-template-x.cjs
++++ b/node_modules/easy-template-x/dist/cjs/easy-template-x.cjs
+@@ -5085,8 +5085,16 @@ class ChartPlugin extends TemplatePlugin {
+       return;
+     }
+ 
+-    // Update the chart
+-    await updateChart(context.currentPart, content);
++    // Update the chart - get the actual chart part via r:id
++    const chartRelId = chartNode.attributes && chartNode.attributes["r:id"];
++    if (!chartRelId) {
++      throw new TemplateSyntaxError(`Chart tag "${tag.rawText}" is missing r:id reference`);
++    }
++    const chartPart = await context.currentPart.getPartById(chartRelId);
++    if (!chartPart) {
++      throw new TemplateSyntaxError(`Chart part with id "${chartRelId}" not found`);
++    }
++    await updateChart(chartPart, content);
+   }
+ }
+ function updateTitle(tag, newTitle) {
+diff --git a/node_modules/easy-template-x/dist/es/easy-template-x.mjs b/node_modules/easy-template-x/dist/es/easy-template-x.mjs
+index 7176e4b..68e1f05 100644
+--- a/node_modules/easy-template-x/dist/es/easy-template-x.mjs
++++ b/node_modules/easy-template-x/dist/es/easy-template-x.mjs
+@@ -5083,8 +5083,16 @@ class ChartPlugin extends TemplatePlugin {
+       return;
+     }
+ 
+-    // Update the chart
+-    await updateChart(context.currentPart, content);
++    // Update the chart - get the actual chart part via r:id
++    const chartRelId = chartNode.attributes && chartNode.attributes["r:id"];
++    if (!chartRelId) {
++      throw new TemplateSyntaxError(`Chart tag "${tag.rawText}" is missing r:id reference`);
++    }
++    const chartPart = await context.currentPart.getPartById(chartRelId);
++    if (!chartPart) {
++      throw new TemplateSyntaxError(`Chart part with id "${chartRelId}" not found`);
++    }
++    await updateChart(chartPart, content);
+   }
+ }
+ function updateTitle(tag, newTitle) {
