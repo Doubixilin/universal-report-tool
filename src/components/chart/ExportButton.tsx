@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Button, Dropdown, message } from 'antd';
 import {
   DownloadOutlined,
@@ -39,9 +39,10 @@ const ExportButton: React.FC<ExportButtonProps> = ({
   const [loading, setLoading] = useState(false);
   const chartStore = useChartStore();
 
-  const filename = chartStore.title || 'chart';
+  const rawFilename = chartStore.title || 'chart';
+  const filename = rawFilename.replace(/[\/\\:*?"<>|]/g, '-');
 
-  const handleExcelExport = async () => {
+  const handleExcelExport = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -74,9 +75,9 @@ const ExportButton: React.FC<ExportButtonProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [exportOptions, chartStore, onSuccess, onError]);
 
-  const handlePNGExport = () => {
+  const handlePNGExport = useCallback(() => {
     if (!chartInstance) {
       message.warning('图表未初始化');
       return;
@@ -90,9 +91,9 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       message.error(`PNG 导出失败: ${errorMessage}`);
       onError?.(errorMessage);
     }
-  };
+  }, [chartInstance, filename, onSuccess, onError]);
 
-  const handleHDExport = (ratio: number) => {
+  const handleHDExport = useCallback((ratio: number) => {
     if (!chartInstance) {
       message.warning('图表未初始化');
       return;
@@ -106,9 +107,9 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       message.error(`PNG 导出失败: ${errorMessage}`);
       onError?.(errorMessage);
     }
-  };
+  }, [chartInstance, filename, onSuccess, onError]);
 
-  const handleSVGExport = () => {
+  const handleSVGExport = useCallback(() => {
     if (!chartInstance) {
       message.warning('图表未初始化');
       return;
@@ -122,9 +123,9 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       message.error(`SVG 导出失败: ${errorMessage}`);
       onError?.(errorMessage);
     }
-  };
+  }, [chartInstance, filename, onSuccess, onError]);
 
-  const handlePDFExport = async () => {
+  const handlePDFExport = useCallback(async () => {
     if (!chartContainer) {
       message.warning('图表容器未初始化');
       return;
@@ -142,9 +143,11 @@ const ExportButton: React.FC<ExportButtonProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [chartContainer, filename, onSuccess, onError]);
 
-  const items = [
+  const handleHDExport3 = useCallback(() => handleHDExport(3), [handleHDExport]);
+
+  const items = useMemo(() => [
     {
       key: 'png',
       label: '导出为 PNG（2x 高清）',
@@ -155,7 +158,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       key: 'png-hd',
       label: '导出为 PNG（3x 超清）',
       icon: <FileImageOutlined />,
-      onClick: () => handleHDExport(3),
+      onClick: handleHDExport3,
     },
     {
       key: 'svg',
@@ -179,7 +182,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       onClick: handleExcelExport,
       disabled: !enableExcel,
     },
-  ];
+  ], [handlePNGExport, handleHDExport3, handleSVGExport, handlePDFExport, handleExcelExport, enableExcel]);
 
   return (
     <Dropdown menu={{ items }} placement="bottomRight">

@@ -38,7 +38,7 @@ export async function createChartConfig(
   configData: ChartConfigData
 ): Promise<string> {
   const db = await getDatabase();
-  const id = `cc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `cc_${crypto.randomUUID()}`;
   const now = new Date().toISOString();
 
   await db.execute(

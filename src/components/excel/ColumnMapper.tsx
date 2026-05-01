@@ -82,6 +82,19 @@ export default function ColumnMapper({
     onConfirm(mapping);
   };
 
+  // 预计算所有已映射的目标字段（O(n) 一次，避免 render 内 O(n^2)）
+  const mappedTargetsByField = useMemo(() => {
+    const map = new Map<string, string[]>();
+    mappings.forEach((m) => {
+      if (m.targetField) {
+        const keys = map.get(m.targetField) || [];
+        keys.push(m.key);
+        map.set(m.targetField, keys);
+      }
+    });
+    return map;
+  }, [mappings]);
+
   const columns: ColumnsType<MappingRecord> = [
     {
       title: "源列名",
@@ -109,7 +122,6 @@ export default function ColumnMapper({
       dataIndex: "targetField",
       key: "targetField",
       render: (_, record) => {
-        const mappedTargets = mappings.filter((m) => m.targetField && m.key !== record.key).map((m) => m.targetField);
         return (
           <Select
             style={{ width: "100%" }}
@@ -126,7 +138,9 @@ export default function ColumnMapper({
               ...KNOWN_FIELDS.map((f) => ({
                 label: f,
                 value: f,
-                disabled: mappedTargets.includes(f),
+                disabled:
+                  mappedTargetsByField.has(f) &&
+                  mappedTargetsByField.get(f)!.some((k) => k !== record.key),
               })),
               // 添加源列名作为备选
               ...headers.filter((h) => !KNOWN_FIELDS.includes(h)).map((h) => ({

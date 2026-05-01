@@ -75,8 +75,8 @@ export default function ImportWizard({ file, projectId, onImportComplete, onCanc
             setMatchedHistory(match);
             message.info(`检测到相同结构的文件「${match.filename}」，可一键复用列映射`);
           }
-        } catch {
-          // import_history 表可能不存在，忽略
+        } catch (err) {
+          console.error("Failed to find import history by fingerprint:", err);
         }
 
         setCurrentStep(1);
@@ -169,8 +169,8 @@ export default function ImportWizard({ file, projectId, onImportComplete, onCanc
           fingerprint: generateFingerprint(analysis.headers),
           projectId,
         });
-      } catch {
-        // 静默处理，不影响主流程
+      } catch (err) {
+        console.error("Failed to save import history:", err);
       }
 
       await onImportComplete(dataset, records, scheme);

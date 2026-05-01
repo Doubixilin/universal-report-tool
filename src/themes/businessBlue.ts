@@ -6,7 +6,7 @@ export const businessBlueTheme: EChartsTheme = {
   backgroundColor: '#FFFFFF',
   textStyle: {
     color: '#333333',
-    fontFamily: '"Microsoft YaHei", "Arial", sans-serif',
+    fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif',
     fontSize: 12,
   },
   title: {

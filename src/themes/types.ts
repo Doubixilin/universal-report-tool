@@ -4,8 +4,6 @@ export interface EChartsTheme {
   color: string[];
   /** 背景色 */
   backgroundColor?: string;
-  /** 是否为深色模式 */
-  darkMode?: boolean;
   /** 全局文字样式 */
   textStyle?: {
     color?: string;
@@ -39,7 +37,6 @@ export interface EChartsTheme {
   axisTick?: Record<string, unknown>;
   splitLine?: Record<string, unknown>;
   splitArea?: Record<string, unknown>;
-  timeline?: Record<string, unknown>;
   /** 系列默认样式 */
   series?: Record<string, unknown>;
 }

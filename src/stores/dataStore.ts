@@ -21,7 +21,12 @@ export const useDataStore = create<DataState>((set) => ({
   currentRecords: [],
   importSchemes: [],
   setDatasets: (datasets) => set({ datasets }),
-  setCurrentDataset: (dataset) => set({ currentDataset: dataset }),
+  setCurrentDataset: (dataset) =>
+    set((state) => ({
+      currentDataset: dataset,
+      currentRecords:
+        state.currentDataset?.id !== dataset?.id ? [] : state.currentRecords,
+    })),
   setCurrentRecords: (records) => set({ currentRecords: records }),
   setImportSchemes: (schemes) => set({ importSchemes: schemes }),
   addDataset: (dataset) =>
@@ -37,5 +42,7 @@ export const useDataStore = create<DataState>((set) => ({
       datasets: state.datasets.filter((d) => d.id !== id),
       currentDataset:
         state.currentDataset?.id === id ? null : state.currentDataset,
+      currentRecords:
+        state.currentDataset?.id === id ? [] : state.currentRecords,
     })),
 }));

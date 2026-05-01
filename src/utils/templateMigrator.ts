@@ -162,7 +162,12 @@ function extractPlaceholdersFromText(
 
     let type: ParsedPlaceholder["type"] = forcedType || "text";
     if (!forcedType) {
-      if (isOpener || isCloser) type = "condition";
+      if (isOpener || isCloser) {
+        // 区分循环块 ({#items}) 和条件块 ({#condition})：
+        // 当前 easy-template-x 中以 # 开头的块，若闭合标签为 / 则为循环块
+        const isLoop = isOpener && !isCloser;
+        type = isLoop ? "loop" : "condition";
+      }
     }
 
     placeholders.push({
@@ -174,33 +179,4 @@ function extractPlaceholdersFromText(
       location: { paragraph: paragraphIndex, cell: cellInfo },
     });
   }
-}
-
-/**
- * 将 docx-templates 语法迁移为 easy-template-x 语法
- */
-export function convertTemplateSyntax(xmlContent: string): string {
-  return xmlContent
-    .replace(/\+\+\+INS\s+(\w+)\+\+\+/g, "{$1}")
-    .replace(/\+\+\+IF\s+(.+?)\+\+\+/g, "{#$1}")
-    .replace(/\+\+\+END-IF\+\+\+/g, "{/$1}")
-    .replace(/\+\+\+FOR\s+(\w+)\s+IN\s+(\w+)\+\+\+/g, "{#$2}")
-    .replace(/\+\+\+END-FOR\+\+\+/g, "{/$2}")
-    .replace(/\+\+\+IMAGE\s+(.+?)\+\+\+/g, "[IMAGE: $1 - 需手动迁移]");
-}
-
-/**
- * 检测模板语法版本
- */
-export async function detectTemplateSyntax(
-  docxPath: string
-): Promise<"easy-template-x" | "docx-templates" | "unknown"> {
-  const bytes = await readFile(docxPath);
-  const zip = await JSZip.loadAsync(bytes);
-  const docXml = await zip.file("word/document.xml")?.async("string");
-  if (!docXml) return "unknown";
-
-  if (/\+\+\+(INS|IF|FOR|IMAGE)/.test(docXml)) return "docx-templates";
-  if (/\{[\w#\/]+\}/.test(docXml)) return "easy-template-x";
-  return "unknown";
 }

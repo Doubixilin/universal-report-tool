@@ -6,7 +6,7 @@ export const partyRedTheme: EChartsTheme = {
   backgroundColor: '#FFFFFF',
   textStyle: {
     color: '#2D3748',
-    fontFamily: '"Microsoft YaHei", "SimHei", sans-serif',
+    fontFamily: '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif',
     fontSize: 12,
   },
   title: {

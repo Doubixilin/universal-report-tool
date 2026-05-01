@@ -66,24 +66,7 @@ export interface MergeCell {
 
 // ==================== 图表相关 ====================
 
-export type ChartType =
-  | "bar"
-  | "line"
-  | "scatter"
-  | "pie"
-  | "donut"
-  | "radar"
-  | "heatmap"
-  | "boxplot"
-  | "gauge"
-  | "funnel"
-  | "sankey"
-  | "treemap"
-  | "sunburst"
-  | "combo-bar-line"
-  | "combo-line-line";
-
-// ChartConfig 已移至 types/chart.ts，通过 export * from './chart' 导出
+// ChartConfig 和 ChartTypeKind 已移至 types/chart.ts，通过 export * from './chart' 导出
 
 // ==================== 模板相关 ====================
 
@@ -143,8 +126,6 @@ export interface ReportJob {
   createdAt: string;
   completedAt?: string;
 }
-
-// ==================== 报告生成相关 ====================
 
 export interface ParsedPlaceholder {
   name: string;

@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { ChartConfig, ChartTypeKind, ChartSeries } from "@/types";
-import type { AnnotationConfig } from "@/components/chart/chartConfigs/types";
+
+/** 标注配置（内联定义，避免store依赖组件层） */
+interface AnnotationConfig {
+  markMax: boolean;
+  markMin: boolean;
+  markAverage: boolean;
+  markTarget?: number;
+  warnRangeLower?: number;
+  warnRangeUpper?: number;
+}
 
 const DEFAULT_ANNOTATIONS: AnnotationConfig = {
   markMax: false,
@@ -37,6 +46,7 @@ interface ChartState {
   addChartConfig: (config: ChartConfig) => void;
   updateChartConfig: (config: ChartConfig) => void;
   removeChartConfig: (id: string) => void;
+  syncEditorFromChart: (config: ChartConfig) => void;
 
   // 图表设计器操作
   setTitle: (title: string) => void;
@@ -45,6 +55,8 @@ interface ChartState {
   setYAxisTitle: (yAxisTitle?: string) => void;
   setCategories: (categories: string[]) => void;
   setSeries: (series: ChartSeries[]) => void;
+  syncChartFromEditor: () => void;
+  clearExportError: () => void;
 
   // 导出操作
   setExporting: (isExporting: boolean) => void;
@@ -76,7 +88,21 @@ export const useChartStore = create<ChartState>((set) => ({
   annotations: DEFAULT_ANNOTATIONS,
 
   setChartConfigs: (configs) => set({ chartConfigs: configs }),
-  setCurrentChart: (config) => set({ currentChart: config }),
+  setCurrentChart: (config) =>
+    set(() => {
+      if (config) {
+        return {
+          currentChart: config,
+          title: config.title,
+          chartType: config.chartType,
+          xAxisTitle: config.xAxisTitle,
+          yAxisTitle: config.yAxisTitle,
+          categories: config.categories ? [...config.categories] : [],
+          series: config.series ? config.series.map((s) => ({ ...s })) : [],
+        };
+      }
+      return { currentChart: null };
+    }),
   addChartConfig: (config) =>
     set((state) => ({ chartConfigs: [...state.chartConfigs, config] })),
   updateChartConfig: (config) =>
@@ -84,12 +110,23 @@ export const useChartStore = create<ChartState>((set) => ({
       chartConfigs: state.chartConfigs.map((c) =>
         c.id === config.id ? config : c
       ),
+      currentChart:
+        state.currentChart?.id === config.id ? config : state.currentChart,
     })),
   removeChartConfig: (id) =>
     set((state) => ({
       chartConfigs: state.chartConfigs.filter((c) => c.id !== id),
       currentChart: state.currentChart?.id === id ? null : state.currentChart,
     })),
+  syncEditorFromChart: (config) =>
+    set({
+      title: config.title,
+      chartType: config.chartType,
+      xAxisTitle: config.xAxisTitle,
+      yAxisTitle: config.yAxisTitle,
+      categories: config.categories ? [...config.categories] : [],
+      series: config.series ? config.series.map((s) => ({ ...s })) : [],
+    }),
 
   setTitle: (title) => set({ title }),
   setChartType: (chartType) => set({ chartType }),
@@ -97,9 +134,31 @@ export const useChartStore = create<ChartState>((set) => ({
   setYAxisTitle: (yAxisTitle) => set({ yAxisTitle }),
   setCategories: (categories) => set({ categories }),
   setSeries: (series) => set({ series }),
+  syncChartFromEditor: () =>
+    set((state) => {
+      if (!state.currentChart) return {};
+      const updated: ChartConfig = {
+        ...state.currentChart,
+        title: state.title,
+        chartType: state.chartType,
+        xAxisTitle: state.xAxisTitle,
+        yAxisTitle: state.yAxisTitle,
+        categories: [...state.categories],
+        series: state.series.map((s) => ({ ...s })),
+        updatedAt: new Date().toISOString(),
+      };
+      return {
+        currentChart: updated,
+        chartConfigs: state.chartConfigs.map((c) =>
+          c.id === updated.id ? updated : c
+        ),
+      };
+    }),
+  clearExportError: () => set({ exportError: null, isExporting: false }),
 
   setExporting: (isExporting) => set({ isExporting }),
-  setExportError: (exportError) => set({ exportError }),
+  setExportError: (exportError) =>
+    set({ exportError, isExporting: false }),
   setTheme: (theme) => set({ theme }),
   setAnnotations: (annotations) => set({ annotations }),
 }));

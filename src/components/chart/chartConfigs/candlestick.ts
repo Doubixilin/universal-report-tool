@@ -5,10 +5,11 @@ import type { ChartGeneratorInput } from './types';
 export function createCandlestickOption(input: ChartGeneratorInput): EChartsOption {
   const data = input.categories.map((_, i) => {
     const vals = input.series[0]?.values || [];
-    const open = vals[i] ?? 100;
-    const close = vals[i + 1] ?? open + (Math.random() - 0.5) * 20;
-    const low = Math.min(open, close) - Math.random() * 10;
-    const high = Math.max(open, close) + Math.random() * 10;
+    const value = vals[i] ?? 100;
+    const open = value;
+    const close = vals[i + 1] ?? value;
+    const low = Math.min(open, close) - 5;
+    const high = Math.max(open, close) + 5;
     return [open, close, low, high];
   });
 

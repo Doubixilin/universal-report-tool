@@ -6,7 +6,7 @@ export function createHeatmapOption(input: ChartGeneratorInput): EChartsOption {
   const data: number[][] = [];
   for (let i = 0; i < input.categories.length; i++) {
     for (let j = 0; j < input.series.length; j++) {
-      data.push([j, i, input.series[j]?.values[i] ?? Math.random() * 10]);
+      data.push([j, i, input.series[j]?.values[i] ?? 0]);
     }
   }
   const maxVal = Math.max(...data.map((d) => d[2]), 10);
@@ -40,7 +40,7 @@ export function createHeatmapOption(input: ChartGeneratorInput): EChartsOption {
 }
 
 export function createAreaOption(input: ChartGeneratorInput): EChartsOption {
-  const lineOption = createLineOption(input);
+  const lineOption = JSON.parse(JSON.stringify(createLineOption(input)));
   const series = (lineOption.series as any[]) || [];
   series.forEach((s) => { s.areaStyle = {}; });
   return lineOption;

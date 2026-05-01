@@ -13,7 +13,7 @@ export function createScatterOption(input: ChartGeneratorInput): EChartsOption {
     series: input.series.map((s) => ({
       type: 'scatter' as const,
       name: s.name,
-      data: input.categories.map((_, i) => [i + 1, s.values[i] ?? Math.random() * 10]),
+      data: input.categories.map((_, i) => [i + 1, s.values[i] ?? 0]),
       itemStyle: s.color ? { color: s.color } : undefined,
       ...annotations,
     })),
@@ -24,7 +24,7 @@ export function createBubbleOption(input: ChartGeneratorInput): EChartsOption {
   const scatterData = input.series[0]?.values.map((v, i) => {
     const x = i + 1;
     const y = v;
-    const size = (input.series[1]?.values[i] ?? Math.random() * 50) / 5;
+    const size = (input.series[1]?.values[i] ?? 0) / 5;
     return [x, y, size];
   }) || [];
 

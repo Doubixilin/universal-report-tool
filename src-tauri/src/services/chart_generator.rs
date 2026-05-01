@@ -5,26 +5,19 @@ use std::path::Path;
 use umya_spreadsheet::{new_file, writer::xlsx::write};
 
 use crate::models::chart_data::ChartDataRequest;
+use crate::models::error::AppError;
 use crate::utils::chart_type_mapper::map_chart_type;
 
 /// 生成包含图表的 Excel 文件
-///
-/// # 参数
-/// - `filepath`: 输出文件路径
-/// - `request`: 图表数据请求
-///
-/// # 返回值
-/// - `Ok(())`: 生成成功
-/// - `Err(String)`: 生成失败，返回错误信息
 pub fn generate_excel_with_chart(
     filepath: &str,
     request: &ChartDataRequest,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     // 1. 创建工作簿
     let mut book = new_file();
     let sheet = book
         .get_sheet_by_name_mut("Sheet1")
-        .ok_or_else(|| "获取工作表失败: 找不到 Sheet1".to_string())?;
+        .ok_or_else(|| AppError::Internal("获取工作表失败: 找不到 Sheet1".to_string()))?;
 
     let data_row_count = request.categories.len();
     let series_count = request.series.len();
@@ -33,7 +26,7 @@ pub fn generate_excel_with_chart(
     // 2. 写入表头行（第 1 行：A1=分类列标题，B1起=各系列名称）
     sheet
         .get_cell_mut("A1")
-        .set_value(&request.x_axis_title.clone().unwrap_or_else(|| "类别".to_string()));
+        .set_value(request.x_axis_title.as_deref().unwrap_or("类别"));
 
     for (idx, series) in request.series.iter().enumerate() {
         let col = col_letter(idx + 1); // B=1, C=2, ...
@@ -52,10 +45,10 @@ pub fn generate_excel_with_chart(
         // B 列起：各系列数据
         for (series_idx, series) in request.series.iter().enumerate() {
             let col = col_letter(series_idx + 1);
-            let val = series.values.get(cat_idx).copied().unwrap_or_else(|| {
-                debug_assert!(false, "series[{}] 缺少 cat_idx={} 的数据，命令层应已校验", series_idx, cat_idx);
-                0.0
-            });
+            let val = series.values.get(cat_idx).copied()
+                .ok_or_else(|| AppError::Validation(format!(
+                    "series[{}] 在 cat_idx={} 处数据缺失", series_idx, cat_idx
+                )))?;
             let val_ref = format!("{}{}", col, row);
             // umya-spreadsheet 的 set_value 会自动识别数字字符串并存储为数值类型
             sheet.get_cell_mut(val_ref.as_str()).set_value(val.to_string());
@@ -122,14 +115,14 @@ pub fn generate_excel_with_chart(
 
     // 7. 保存文件
     let path = Path::new(filepath);
-    write(&book, path).map_err(|e| format!("保存 Excel 文件失败: {}", e))?;
+    write(&book, path).map_err(|e| AppError::Io(format!("保存 Excel 文件失败: {}", e)))?;
 
     Ok(())
 }
 
 /// 将列索引（1-based）转换为 Excel 列字母（A, B, C, ..., Z, AA, AB, ...）
 fn col_letter(index: usize) -> String {
-    assert!(index > 0, "col_letter 参数必须大于 0，收到: {}", index);
+    debug_assert!(index > 0, "col_letter 参数必须大于 0，收到: {}", index);
     let mut result = String::new();
     let mut n = index;
 

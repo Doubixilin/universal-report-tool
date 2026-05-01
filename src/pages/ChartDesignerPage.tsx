@@ -155,8 +155,8 @@ export default function ChartDesignerPage() {
           yAxisFields: [],
           seriesNames: c.configJson.series.map((s) => s.name),
           colors: c.configJson.series.map((s) => s.color ?? "").filter(Boolean),
-          createdAt: new Date(c.createdAt).getTime(),
-          updatedAt: new Date(c.updatedAt).getTime(),
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
         }))
       );
     } catch (e) {

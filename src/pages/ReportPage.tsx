@@ -1,4 +1,4 @@
-import { Typography } from "antd";
+import { Typography, message } from "antd";
 import ReportGenerator from "@/components/report/ReportGenerator";
 import type { ReportGenerationResult } from "@/types";
 
@@ -7,9 +7,9 @@ const { Title } = Typography;
 export default function ReportPage() {
   const handleGenerateComplete = (result: ReportGenerationResult) => {
     if (result.success) {
-      console.log("报告生成成功:", result.outputPath);
+      message.success(`报告已成功生成: ${result.outputPath || "完成"}`);
     } else {
-      console.error("报告生成失败:", result.error);
+      message.error(`报告生成失败: ${result.error || "未知错误"}`);
     }
   };
 

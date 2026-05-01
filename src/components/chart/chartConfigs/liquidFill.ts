@@ -4,7 +4,7 @@ import type { ChartGeneratorInput } from './types';
 
 /** 水球图配置 — 取 series 第一个值作为百分比 */
 export function createLiquidFillOption(input: ChartGeneratorInput): EChartsOption {
-  const val = input.series[0]?.values[0] ?? 60;
+  const val = input.series[0]?.values[0] ?? 50;
   const pct = Math.min(Math.max(val / 100, 0), 1); // 归一化到 0-1
   const color = input.series[0]?.color || '#156ACF';
 

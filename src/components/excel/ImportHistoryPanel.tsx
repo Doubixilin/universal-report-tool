@@ -22,7 +22,7 @@ export default function ImportHistoryPanel({ projectId, onReuse }: ImportHistory
       const records = await getImportHistory(projectId);
       setHistory(records);
     } catch (err) {
-      // 表可能不存在，静默处理
+      console.error("Failed to load import history:", err);
       setHistory([]);
     } finally {
       setLoading(false);

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Table, Tag, Typography } from "antd";
 import { MergeCell, TableType } from "@/types";
 import type { ColumnsType } from "antd/es/table";
@@ -31,33 +32,41 @@ export default function DataPreview({
   mergedCells,
   loading,
 }: DataPreviewProps) {
-  const columns: ColumnsType<Record<string, any>> = headers.map((h, i) => ({
-    title: (
-      <span>
-        {h}
-        <br />
-        <Text type="secondary" style={{ fontSize: 11 }}>
-          第 {i + 1} 列
-        </Text>
-      </span>
-    ),
-    dataIndex: h,
-    key: `col-${i}-${h}`,
-    ellipsis: { showTitle: true },
-    width: 120,
-    render: (text: any) => {
-      const displayVal = text ?? "";
-      return <span title={String(displayVal)}>{String(displayVal)}</span>;
-    },
-  }));
+  const columns: ColumnsType<Record<string, any>> = useMemo(
+    () =>
+      headers.map((h, i) => ({
+        title: (
+          <span>
+            {h}
+            <br />
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              第 {i + 1} 列
+            </Text>
+          </span>
+        ),
+        dataIndex: h,
+        key: `col-${i}-${h}`,
+        ellipsis: { showTitle: true },
+        width: 120,
+        render: (text: any) => {
+          const displayVal = text ?? "";
+          return <span title={String(displayVal)}>{String(displayVal)}</span>;
+        },
+      })),
+    [headers, data, dataStartRow]
+  );
 
-  const dataSource = data.slice(dataStartRow).map((row, idx) => {
-    const record: Record<string, any> = { _key: idx };
-    headers.forEach((h, i) => {
-      record[h] = row[i] !== undefined ? row[i] : "";
-    });
-    return record;
-  });
+  const dataSource = useMemo(
+    () =>
+      data.slice(dataStartRow).map((row, idx) => {
+        const record: Record<string, any> = { _key: idx };
+        headers.forEach((h, i) => {
+          record[h] = row[i] !== undefined ? row[i] : "";
+        });
+        return record;
+      }),
+    [data, dataStartRow]
+  );
 
   return (
     <div>

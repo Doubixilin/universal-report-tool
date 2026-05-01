@@ -51,11 +51,12 @@ export async function saveImportHistory(record: Omit<ImportHistoryRecord, 'id' |
     ]
   );
 
-  // 保留最近 50 条记录，清理旧的
+  // 保留该项目最近 50 条记录，清理旧的
   await db.execute(
-    `DELETE FROM import_history WHERE id NOT IN (
-      SELECT id FROM import_history ORDER BY created_at DESC LIMIT 50
-    )`
+    `DELETE FROM import_history WHERE project_id = $1 AND id NOT IN (
+      SELECT id FROM import_history WHERE project_id = $1 ORDER BY created_at DESC LIMIT 50
+    )`,
+    [record.projectId]
   );
 
   return id;

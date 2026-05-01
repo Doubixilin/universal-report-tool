@@ -71,8 +71,13 @@ export interface ChartConfig {
   yAxisFields: string[];
   seriesNames: string[];
   colors: string[];
-  createdAt: number;
-  updatedAt: number;
+  /** 运行时图表数据（从 config_json 恢复或编辑器填充） */
+  xAxisTitle?: string;
+  yAxisTitle?: string;
+  categories?: string[];
+  series?: ChartSeries[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** 主题类型 */
@@ -84,8 +89,8 @@ export interface ChartTheme {
   themeJson: string;     // 序列化后的 EChartsTheme
   previewImage?: string; // base64 预览图
   isDefault: boolean;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** 导出格式 */

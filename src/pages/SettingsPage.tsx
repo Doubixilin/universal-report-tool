@@ -1,19 +1,72 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, Form, Select, Switch, Button, Input, Typography, message, Space, Statistic, Row, Col } from "antd";
 import { SaveOutlined, ExperimentOutlined, DeleteOutlined } from "@ant-design/icons";
+import { invoke } from "@tauri-apps/api/core";
 import { generateTestData, clearTestData } from "@/utils/testDataGenerator";
 
 const { Title } = Typography;
 const { TextArea } = Input;
 
+/** 从 app_settings 加载所有设置 */
+async function loadAppSettings(): Promise<Record<string, string>> {
+  const rows = await invoke<Array<{ key: string; value: string }>>("run_sql", {
+    sql: "SELECT key, value FROM app_settings",
+    params: [],
+  });
+  const settings: Record<string, string> = {};
+  for (const row of rows) {
+    settings[row.key] = row.value;
+  }
+  return settings;
+}
+
+/** 保存单个设置项 */
+async function saveSetting(key: string, value: string): Promise<void> {
+  await invoke("run_sql", {
+    sql: "INSERT OR REPLACE INTO app_settings (key, value) VALUES ($1, $2)",
+    params: [key, value],
+  });
+}
+
 export default function SettingsPage() {
   const [form] = Form.useForm();
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState<{ datasets: number; chartConfigs: number; records: number } | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  const handleSave = () => {
-    message.success("配置已保存");
-  };
+  // 从数据库加载设置
+  useEffect(() => {
+    (async () => {
+      try {
+        const settings = await loadAppSettings();
+        form.setFieldsValue({
+          storageType: settings.storage_type || "sqlite",
+          autoDetectHeader: settings.auto_detect !== "false",
+          enableSynonym: settings.enable_synonym !== "false",
+          defaultTheme: settings.default_chart_theme || "default",
+          customMappings: settings.custom_mappings || "",
+        });
+      } catch (err) {
+        console.error("加载设置失败:", err);
+      } finally {
+        setSettingsLoaded(true);
+      }
+    })();
+  }, [form]);
+
+  const handleSave = useCallback(async () => {
+    try {
+      const values = form.getFieldsValue();
+      await saveSetting("storage_type", values.storageType ?? "sqlite");
+      await saveSetting("auto_detect", String(values.autoDetectHeader ?? true));
+      await saveSetting("enable_synonym", String(values.enableSynonym ?? true));
+      await saveSetting("default_chart_theme", values.defaultTheme ?? "default");
+      await saveSetting("custom_mappings", values.customMappings ?? "");
+      message.success("配置已保存到数据库");
+    } catch (err) {
+      message.error("保存失败: " + (err instanceof Error ? err.message : String(err)));
+    }
+  }, [form]);
 
   const handleGenerateTestData = async () => {
     setTestLoading(true);
@@ -54,7 +107,7 @@ export default function SettingsPage() {
         <Title level={4} style={{ margin: 0 }}>
           配置中心
         </Title>
-        <Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>
+        <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} disabled={!settingsLoaded}>
           保存配置
         </Button>
       </div>

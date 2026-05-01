@@ -6,11 +6,12 @@ import type { ChartGeneratorInput } from './types';
 export function createWordCloudOption(input: ChartGeneratorInput): EChartsOption {
   const data = input.categories.map((name, i) => ({
     name,
-    value: input.series[0]?.values[i] ?? Math.floor(Math.random() * 100),
+    value: input.series[0]?.values[i] ?? 10,
   }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 100); // 限制 100 个词
 
+  let colorIdx = 0;
   return {
     title: { text: input.title, left: 'center' },
     tooltip: { show: true },
@@ -29,7 +30,11 @@ export function createWordCloudOption(input: ChartGeneratorInput): EChartsOption
       textStyle: {
         fontFamily: 'sans-serif',
         fontWeight: 'bold',
-        color: () => `hsl(${Math.random() * 360}, 70%, 50%)`,
+        color: () => {
+          const hue = (colorIdx * 137.508) % 360;
+          colorIdx++;
+          return `hsl(${hue}, 70%, 50%)`;
+        },
       },
       emphasis: {
         focus: 'self',

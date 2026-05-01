@@ -1,4 +1,4 @@
-import { TemplateHandler } from "easy-template-x";
+import { TemplateHandler, type TemplateData } from "easy-template-x";
 import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import type {
@@ -43,14 +43,32 @@ async function resolveBindings(
 ): Promise<Record<string, unknown>> {
   const data: Record<string, unknown> = {};
 
+  // 收集所有图表绑定，并行查询 SQLite
+  const chartEntries = Object.entries(bindings).filter(
+    ([, binding]) => binding.chartId
+  );
+  const chartConfigPromises = chartEntries.map(([, binding]) =>
+    getChartConfigById(binding.chartId!)
+  );
+  const chartConfigs = await Promise.all(chartConfigPromises);
+
+  // 构建 chartId → config 的快速查找映射
+  const chartConfigMap = new Map<string, (typeof chartConfigs)[number]>();
+  chartEntries.forEach(([, binding], idx) => {
+    if (chartConfigs[idx]) {
+      chartConfigMap.set(binding.chartId!, chartConfigs[idx]);
+    }
+  });
+
+  const store = useChartStore.getState();
+
   for (const [placeholderName, binding] of Object.entries(bindings)) {
     if (binding.chartId) {
       // 图表绑定：优先从已保存配置查找，回退到当前编辑状态
-      const store = useChartStore.getState();
       let chartData: { title: string; categories: string[]; series: ChartSeries[] };
 
       // 优先从 SQLite 持久化配置中读取（config_json 包含完整图表数据）
-      const savedRecord = binding.chartId ? await getChartConfigById(binding.chartId) : null;
+      const savedRecord = binding.chartId ? chartConfigMap.get(binding.chartId) : null;
       if (savedRecord) {
         const cfg = savedRecord.configJson;
         chartData = {
@@ -137,9 +155,8 @@ export async function generateReport(
     );
 
     // Step 4: 处理模板
-    // easy-template-x 的 TemplateData 类型过于严格，使用类型断言
     const handler = new TemplateHandler();
-    const outputDoc = await handler.process(templateBuffer, data as never);
+    const outputDoc = await handler.process(templateBuffer, data as TemplateData);
 
     // Step 5: 写入输出
     await writeFile(request.outputPath, Buffer.from(outputDoc));

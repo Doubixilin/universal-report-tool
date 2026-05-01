@@ -56,16 +56,31 @@ pub async fn generate_excel_chart(
     if filepath.is_empty() {
         return Err("文件路径不能为空".to_string());
     }
-    if !filepath.ends_with(".xlsx") {
+    // 严格检查：只允许 .xlsx 扩展名（大小写不敏感）
+    let lower = filepath.to_lowercase();
+    if !lower.ends_with(".xlsx") || lower.ends_with(".xlsx.exe") || lower.ends_with(".xlsx.bat") {
         return Err("文件路径必须以 .xlsx 结尾".to_string());
     }
 
-    // 路径安全校验：canonicalize 防止路径穿越
+    // 路径安全校验：强制 canonicalize，失败则拒绝写入
     let path = Path::new(&filepath);
-    let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let canonical = match std::fs::canonicalize(path) {
+        Ok(p) => p,
+        Err(_) => {
+            // 如果父目录都不存在，拒绝操作
+            return Err("文件路径无效或父目录不存在".to_string());
+        }
+    };
     let path_str = canonical.to_string_lossy().to_lowercase();
-    // 禁止写入系统目录
-    let blocked = ["\\windows\\", "\\system32", "/etc/", "/usr/bin/", "/bin/"];
+
+    // 禁止写入系统目录（白名单思想：只允许用户目录和普通数据盘）
+    let blocked = [
+        "\\windows\\", "\\windows\\system32", "\\windows\\syswow64",
+        "\\program files\\", "\\program files (x86)\\", "\\programdata\\",
+        "\\boot\\", "\\$recycle.bin\\", "\\system volume information\\",
+        "/etc/", "/usr/", "/bin/", "/sbin/", "/lib/", "/lib64/",
+        "/sys/", "/proc/", "/dev/", "/root/", "/var/", "/tmp/",
+    ];
     for b in &blocked {
         if path_str.contains(b) {
             return Err("不允许写入系统目录".to_string());
@@ -122,6 +137,6 @@ pub async fn generate_excel_chart(
             success: true,
             message: format!("Excel 文件已生成: {}", filepath),
         }),
-        Err(err) => Err(format!("图表生成失败: {}", err)),
+        Err(err) => Err(err.to_string()),
     }
 }

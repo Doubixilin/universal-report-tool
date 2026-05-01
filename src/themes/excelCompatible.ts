@@ -6,7 +6,7 @@ export const excelCompatibleTheme: EChartsTheme = {
   backgroundColor: '#FFFFFF',
   textStyle: {
     color: '#000000',
-    fontFamily: 'Calibri, "Microsoft YaHei", Arial, sans-serif',
+    fontFamily: '"Calibri", "Arial", "Noto Sans SC", sans-serif',
     fontSize: 11,
   },
   title: {

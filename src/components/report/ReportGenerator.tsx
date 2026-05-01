@@ -71,12 +71,12 @@ export default function ReportGenerator({ onGenerateComplete }: ReportGeneratorP
             yAxisFields: [],
             seriesNames: c.configJson.series.map((s) => s.name),
             colors: c.configJson.series.map((s) => s.color ?? "").filter(Boolean),
-            createdAt: new Date(c.createdAt).getTime(),
-            updatedAt: new Date(c.updatedAt).getTime(),
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
           }))
         );
-      } catch {
-        // 静默失败，chartConfigs 为空时下拉框为空
+      } catch (err) {
+        console.error("加载图表配置失败:", err);
       }
     })();
   }, []);

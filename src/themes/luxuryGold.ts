@@ -6,7 +6,7 @@ export const luxuryGoldTheme: EChartsTheme = {
   backgroundColor: '#FFFFFF',
   textStyle: {
     color: '#4A4A4A',
-    fontFamily: '"Microsoft YaHei", "Georgia", serif',
+    fontFamily: '"Microsoft YaHei", "Georgia", "Noto Serif SC", "STSong", serif',
     fontSize: 12,
   },
   title: {

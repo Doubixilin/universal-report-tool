@@ -78,15 +78,15 @@ class ThemeManager {
         sql: "INSERT OR REPLACE INTO app_settings (key, value) VALUES ('default_chart_theme', $1)",
         params: [this.currentTheme],
       });
-    } catch {
-      // 静默失败，不影响功能
+    } catch (err) {
+      console.error("Failed to save theme preference:", err);
     }
   }
 
   /** 从数据库加载用户偏好主题 */
   async loadPreference(): Promise<string | null> {
     try {
-      const rows = await invoke<any[]>('run_sql', {
+      const rows = await invoke<Array<{ value: string }>>('run_sql', {
         sql: "SELECT value FROM app_settings WHERE key = 'default_chart_theme'",
         params: [],
       });
@@ -97,8 +97,8 @@ class ThemeManager {
           return themeName;
         }
       }
-    } catch {
-      // 静默失败，使用默认主题
+    } catch (err) {
+      console.error("Failed to load theme preference:", err);
     }
     return null;
   }

@@ -6,7 +6,7 @@ export const ecoGreenTheme: EChartsTheme = {
   backgroundColor: '#FFFFFF',
   textStyle: {
     color: '#1B4332',
-    fontFamily: '"Microsoft YaHei", "SimSun", serif',
+    fontFamily: '"Microsoft YaHei", "SimSun", "Noto Serif SC", "Georgia", serif',
     fontSize: 12,
   },
   title: {

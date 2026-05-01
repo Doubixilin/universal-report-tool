@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Select } from 'antd';
 import { themeManager, type ThemeRecord } from '@/themes';
 
@@ -31,13 +32,17 @@ function renderOption(record: ThemeRecord) {
 }
 
 export default function ThemeSelector({ value, onChange }: ThemeSelectorProps) {
-  const themes = themeManager.listThemes();
+  const themes = useMemo(() => themeManager.listThemes(), []);
 
-  const options: ThemeOptionItem[] = themes.map((t) => ({
-    value: t.name,
-    label: t.label,
-    themeRecord: t,
-  }));
+  const options: ThemeOptionItem[] = useMemo(
+    () =>
+      themes.map((t) => ({
+        value: t.name,
+        label: t.label,
+        themeRecord: t,
+      })),
+    [themes]
+  );
 
   return (
     <Select

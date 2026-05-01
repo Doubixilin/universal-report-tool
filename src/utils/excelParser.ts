@@ -166,6 +166,12 @@ export function inferFieldTypes(
       const val = records[i]?.[header];
       if (val === "" || val === null || val === undefined) continue;
 
+      // xlsx with cellDates:true produces Date objects, not strings
+      if (val instanceof Date) {
+        dateCount++;
+        continue;
+      }
+
       const str = String(val).trim();
       if (str.includes("%")) {
         percentCount++;

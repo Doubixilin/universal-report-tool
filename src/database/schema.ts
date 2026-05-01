@@ -1,6 +1,12 @@
 // SQLite 数据库初始化脚本
 
 export const INIT_SQL = `
+-- 应用设置表（键值对）
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT DEFAULT ''
+);
+
 -- 项目表
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,

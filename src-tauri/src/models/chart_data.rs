@@ -37,29 +37,14 @@ pub struct ChartDataRequest {
     pub x_axis_title: Option<String>,
     #[serde(rename = "yAxisTitle")]
     pub y_axis_title: Option<String>,
-    pub width: Option<u32>,
-    pub height: Option<u32>,
 }
 
 /// 图表生成响应（后端 -> 前端）
-#[allow(dead_code)] // Phase 2 使用
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartGenerationResponse {
     /// 是否成功
     pub success: bool,
-    /// 消息（成功时为空，失败时为错误信息）
+    /// 成功/失败消息
     pub message: String,
 }
 
-#[allow(dead_code)] // Phase 2 使用
-impl ChartDataRequest {
-    /// 获取默认图表宽度（EMU 单位，1 EMU = 1/360000 cm）
-    pub fn default_width() -> u32 {
-        5486400 // 15.24 cm
-    }
-
-    /// 获取默认图表高度
-    pub fn default_height() -> u32 {
-        3200400 // 8.89 cm
-    }
-}

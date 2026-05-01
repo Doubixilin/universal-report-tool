@@ -6,7 +6,7 @@ export const techPurpleTheme: EChartsTheme = {
   backgroundColor: '#FFFFFF',
   textStyle: {
     color: '#2D3436',
-    fontFamily: '"Microsoft YaHei", "Consolas", monospace',
+    fontFamily: '"Microsoft YaHei", "Consolas", "Fira Code", "Courier New", monospace',
     fontSize: 12,
   },
   title: {
